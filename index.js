@@ -18,12 +18,19 @@ app.get('/', (req, res) => {
 // 🔊 Rota para baixar áudio MP3
 app.get('/download', async (req, res) => {
   const videoUrl = req.query.url;
-  if (!videoUrl) return res.status(400).send('URL do vídeo ausente.');
+  if (!videoUrl) {
+    console.error('[download] URL do vídeo ausente');
+    return res.status(400).send('URL do vídeo ausente.');
+  }
 
   try {
+    console.log('[download] Pedido para URL:', videoUrl);
     const info = await ytdl.getInfo(videoUrl);
     const duration = parseInt(info.videoDetails.lengthSeconds);
+    console.log('[download] Duração do vídeo:', duration);
+
     if (duration > MAX_VIDEO_LENGTH) {
+      console.warn('[download] Vídeo muito longo');
       return res.status(400).send('Vídeo muito longo. Máximo permitido: 10 minutos.');
     }
 
@@ -38,33 +45,64 @@ app.get('/download', async (req, res) => {
     ffmpeg(stream)
       .audioBitrate(128)
       .toFormat('mp3')
+      .on('error', (err) => {
+        console.error('[download] Erro no ffmpeg:', err);
+        if (!res.headersSent) {
+          res.status(500).send('Erro no processamento do áudio.');
+        }
+      })
       .pipe(res, { end: true });
+
   } catch (err) {
-    res.status(500).send('Erro ao baixar áudio');
+    console.error('[download] Erro geral:', err);
+    if (!res.headersSent) {
+      res.status(500).send('Erro ao baixar áudio: ' + err.message);
+    }
   }
 });
 
 // 🎥 Rota para baixar vídeo MP4
 app.get('/video', async (req, res) => {
   const videoUrl = req.query.url;
-  if (!videoUrl) return res.status(400).send('URL do vídeo ausente.');
+  if (!videoUrl) {
+    console.error('[video] URL do vídeo ausente');
+    return res.status(400).send('URL do vídeo ausente.');
+  }
 
   try {
+    console.log('[video] Pedido para URL:', videoUrl);
     const info = await ytdl.getInfo(videoUrl);
     const duration = parseInt(info.videoDetails.lengthSeconds);
+    console.log('[video] Duração do vídeo:', duration);
+
     if (duration > MAX_VIDEO_LENGTH) {
+      console.warn('[video] Vídeo muito longo');
       return res.status(400).send('Vídeo muito longo. Máximo permitido: 10 minutos.');
     }
 
     res.setHeader('Content-Disposition', 'attachment; filename=video.mp4');
     res.setHeader('Content-Type', 'video/mp4');
 
-    ytdl(videoUrl, {
-      format: 'mp4',
+    const stream = ytdl(videoUrl, {
+      quality: 'highest',
+      filter: 'audioandvideo',
       requestOptions: { headers: { Cookie: cookies } },
-    }).pipe(res);
+    });
+
+    stream.on('error', (err) => {
+      console.error('[video] Erro no ytdl:', err);
+      if (!res.headersSent) {
+        res.status(500).send('Erro no download do vídeo.');
+      }
+    });
+
+    stream.pipe(res);
+
   } catch (err) {
-    res.status(500).send('Erro ao baixar vídeo');
+    console.error('[video] Erro geral:', err);
+    if (!res.headersSent) {
+      res.status(500).send('Erro ao baixar vídeo: ' + err.message);
+    }
   }
 });
 
