@@ -8,7 +8,16 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
 const MAX_VIDEO_LENGTH = 600; // 10 minutos
-const cookies = fs.existsSync('cookies.txt') ? fs.readFileSync('cookies.txt', 'utf8') : '';
+
+// ✅ Leitura segura e filtrada dos cookies
+const rawCookies = fs.existsSync('cookies.txt') ? fs.readFileSync('cookies.txt', 'utf8') : '';
+const cookies = rawCookies
+  .split('\n')
+  .filter(line => line.trim() && !line.startsWith('#'))
+  .map(line => line.split('\t'))
+  .filter(parts => parts.length >= 7)
+  .map(parts => `${parts[5]}=${parts[6]}`)
+  .join('; ');
 
 app.get('/', (req, res) => {
   res.send(`
@@ -59,7 +68,7 @@ app.get('/download', async (req, res) => {
 
       ffmpeg(ytdl(url, {
         quality: 'highestaudio',
-        requestOptions
+        requestOptions,
       }))
         .audioBitrate(128)
         .format('mp3')
@@ -75,6 +84,6 @@ app.get('/download', async (req, res) => {
   }
 });
 
-// 🚨 IMPORTANTE: use apenas a porta fornecida pelo Render
+// ✅ Porta obrigatória para funcionar no Render
 const PORT = process.env.PORT;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
