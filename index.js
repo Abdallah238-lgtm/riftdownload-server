@@ -19,9 +19,8 @@ app.get('/download', async (req, res) => {
   // lógica aqui
 });
 
-const PORT = process.env.PORT;
-console.log('🟢 Servidor ouvindo na porta:', PORT); // importante mostrar!
+const PORT = process.env.PORT || 3000;
+console.log('🟢 Servidor ouvindo na porta:', PORT);
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
-
