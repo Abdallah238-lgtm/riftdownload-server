@@ -84,6 +84,13 @@ app.get('/download', async (req, res) => {
   }
 });
 
-// ✅ Porta obrigatória para funcionar no Render
 const PORT = process.env.PORT;
-app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
+
+if (!PORT) {
+  console.error('🚨 A variável de ambiente PORT não está definida pelo Render.');
+  process.exit(1);
+}
+
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
